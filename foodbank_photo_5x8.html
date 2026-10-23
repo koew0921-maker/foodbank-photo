@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><title>동제주기초푸드뱅크 인생네컷</title>
+<style>
+:root{font-family:-apple-system,BlinkMacSystemFont,'Apple SD Gothic Neo',sans-serif;color:#19342d;background:#f5f9f5}*{box-sizing:border-box}body{margin:0}main{max-width:750px;margin:auto;padding:22px 16px 50px}header{text-align:center;padding:22px 0}h1{font-size:clamp(26px,6vw,40px);margin:8px 0}p{line-height:1.55}.subtitle{color:#557065}section{display:none}section.active{display:block}.card{background:white;border-radius:25px;box-shadow:0 10px 35px #0b513414;padding:22px;text-align:center}.button{border:0;background:#177754;color:white;border-radius:17px;padding:16px 20px;font-size:18px;font-weight:800;margin:6px;min-height:56px;cursor:pointer}.button.alt{background:#e4eee8;color:#1d5440}.button:disabled{opacity:.5}.preview{width:100%;max-width:340px;aspect-ratio:5/8;max-height:58vh;object-fit:cover;background:#13231c;border-radius:20px;transform:scaleX(-1)}.cam{position:relative}.count{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:104px;color:white;font-weight:900;text-shadow:0 3px 14px #0008;pointer-events:none}.hint{font-size:14px;color:#6a8076}.result{max-width:420px;width:100%;box-shadow:0 8px 18px #0002}.actions{display:flex;justify-content:center;flex-wrap:wrap;margin:14px 0}.status{font-weight:600;color:#406653;white-space:pre-line}.qr{background:white;margin:12px auto;padding:10px;display:inline-block}.qr img{display:block;width:200px;height:200px}details{text-align:left;background:#eaf1ed;border-radius:15px;padding:14px;margin:20px 0}summary{font-weight:bold;cursor:pointer}input{width:100%;font-size:16px;padding:12px;border-radius:12px;border:1px solid #9db1a7;margin:5px 0 10px}.label{display:block;margin-top:10px;font-weight:700}.hidden{display:none!important}#printOnly{display:none}@page{size:postcard;margin:0}@media print{body{background:white}main{display:none!important}#printOnly{display:flex!important;align-items:center;justify-content:center;height:100vh;width:100vw}#printOnly img{display:block;width:100%;height:auto;max-height:100%;object-fit:contain}}
+</style></head><body><main><header><div>🌿 소소한 마을 나눔축제</div><h1>동제주기초푸드뱅크<br>인생네컷</h1><p class="subtitle">2026.10.24 · 구좌읍사무소 주민자치센터</p></header>
+<section id="home" class="active"><div class="card"><p>아이패드 카메라로 세로 5:8 비율로 네 장의 추억을 남겨보세요.</p><button class="button" id="start">📸 촬영 시작</button><p class="hint">촬영하려면 카메라 접근을 허용해주세요.</p></div></section>
+<section id="shoot"><div class="card"><h2 id="progress">촬영 준비</h2><div class="cam"><video id="video" class="preview" playsinline muted autoplay></video><div id="counter" class="count"></div></div><p class="hint">각 사진을 찍기 전 3초를 셉니다.</p><button class="button alt" id="cancel">취소</button></div></section>
+<section id="done"><div class="card"><h2>인생네컷 완성!</h2><img id="result" class="result" alt="완성된 인생네컷 사진"><div class="actions"><button class="button" id="print">🖨️ AirPrint 인쇄</button><button class="button alt" id="share">📤 사진 공유</button><button class="button alt" id="save">⬇ 사진 저장</button></div><p id="message" class="status"></p><div id="qrWrap" class="hidden"><h3>QR 사진 받기</h3><div class="qr" id="qr"></div><p class="hint">휴대전화 카메라로 스캔하세요.</p></div><details><summary>QR코드 공유 설정 (선택)</summary><p class="hint">QR 공유는 인터넷에 사진을 올려야 가능합니다. Cloudinary 계정에서 unsigned 업로드 프리셋을 만든 후 아래 두 값을 넣으세요. 공유용 공개 이미지로 업로드되므로 참가자 동의를 받아주세요. 업로드한 사진은 자동 삭제되지 않습니다.</p><label class="label" for="cloud">Cloudinary cloud name</label><input id="cloud" autocapitalize="off" placeholder="예: my-cloud"><label class="label" for="preset">Unsigned upload preset</label><input id="preset" autocapitalize="off" placeholder="프리셋 이름"><button class="button alt" id="upload">QR 생성하기</button><p id="uploadMessage" class="hint"></p></details><button class="button alt" id="again">다음 참가자 / 처음으로</button></div></section>
+<p id="error" class="status" role="status" style="text-align:center"></p></main><div id="printOnly"><img id="printImg" alt="인쇄할 사진"></div><canvas id="work" class="hidden"></canvas>
+<script>
+'use strict';
+const $=id=>document.getElementById(id);let stream=null,run=0,photos=[],blob=null,url=null;
+function screen(id){['home','shoot','done'].forEach(x=>$(x).classList.toggle('active',x===id))}
+function sleep(ms){return new Promise(r=>setTimeout(r,ms))}
+function stop(){if(stream){stream.getTracks().forEach(t=>t.stop());stream=null}}
+function reset(){run++;stop();photos=[];blob=null;if(url)URL.revokeObjectURL(url);url=null;$('result').removeAttribute('src');$('printImg').removeAttribute('src');$('message').textContent='';$('qrWrap').classList.add('hidden');$('qr').innerHTML='';$('error').textContent='';screen('home')}
+async function begin(){reset();const token=++run;screen('shoot');try{if(!navigator.mediaDevices?.getUserMedia)throw Error('카메라를 사용할 수 없습니다. HTTPS 웹주소에서 Safari로 열어주세요.');stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:'user',width:{ideal:1280},height:{ideal:960}},audio:false});$('video').srcObject=stream;await $('video').play();for(let i=0;i<4;i++){if(token!==run)return;$('progress').textContent=`${i+1} / 4 촬영`;for(let n=3;n>0;n--){if(token!==run)return;$('counter').textContent=n;await sleep(1000)}if(token!==run)return;$('counter').textContent='📸';photos.push(capture());await sleep(450);$('counter').textContent='';await sleep(350)}stop();await compose();if(token!==run)return;screen('done')}catch(e){if(token!==run)return;stop();$('error').textContent='촬영 오류: '+e.message;screen('home')}}
+function capture(){let v=$('video');let c=document.createElement('canvas');c.width=625;c.height=1000;let g=c.getContext('2d');const ratio=Math.max(c.width/v.videoWidth,c.height/v.videoHeight),w=v.videoWidth*ratio,h=v.videoHeight*ratio;g.translate(c.width,0);g.scale(-1,1);g.drawImage(v,(c.width-w)/2,(c.height-h)/2,w,h);return c}
+async function compose(){
+// CP1200 postcard: two identical copies, with each photo cropped to portrait 5:8.
+const c=$('work');c.width=1800;c.height=1200;
+const x=c.getContext('2d');x.fillStyle='#f9f7ed';x.fillRect(0,0,1800,1200);
+for(let col=0;col<2;col++){
+ const left=col*900;
+ x.fillStyle='#11694c';x.fillRect(left,0,900,122);
+ x.fillStyle='white';x.textAlign='center';x.font='bold 42px sans-serif';
+ x.fillText('동제주기초푸드뱅크',left+450,50);
+ x.font='bold 28px sans-serif';x.fillText('소소한 마을 나눔축제',left+450,94);
+ // 2 columns by 2 rows: each photo exactly 280:448 (5:8)
+ const photoW=280,photoH=448,gapX=22,gapY=18;
+ const startX=left+(900-(photoW*2+gapX))/2;
+ const startY=136;
+ for(let i=0;i<4;i++){
+  const px=startX+(i%2)*(photoW+gapX);
+  const py=startY+Math.floor(i/2)*(photoH+gapY);
+  x.drawImage(photos[i],px,py,photoW,photoH);
+ }
+ x.fillStyle='#11694c';x.textAlign='center';
+ x.font='bold 27px sans-serif';x.fillText('2026.10.24 · 구좌읍사무소 주민자치센터',left+450,1105);
+ x.font='21px sans-serif';x.fillText('FOODBANK PHOTO BOOTH',left+450,1144);
+}
+x.strokeStyle='#c6c7c0';x.setLineDash([12,8]);x.beginPath();x.moveTo(900,0);x.lineTo(900,1200);x.stroke();
+blob=await new Promise(r=>c.toBlob(r,'image/png'));url=URL.createObjectURL(blob);
+$('result').src=url;$('printImg').src=url;
+}
+function download(){if(!blob)return;const a=document.createElement('a');a.href=url;a.download='foodbank_fourcut_'+Date.now()+'.png';document.body.append(a);a.click();a.remove();$('message').textContent='Safari에서는 이미지 공유 버튼에서 ‘이미지 저장’을 선택하는 방법도 이용할 수 있습니다.'}
+async function share(){if(!blob)return;const file=new File([blob],'foodbank-fourcut.png',{type:'image/png'});try{if(navigator.canShare?.({files:[file]})){await navigator.share({files:[file],title:'동제주기초푸드뱅크 인생네컷'})}else{download();$('message').textContent='직접 공유가 지원되지 않아 이미지 파일 저장을 시도했습니다.'}}catch(e){if(e.name!=='AbortError')$('message').textContent='공유 오류: '+e.message}}
+async function upload(){if(!blob)return;let cloud=$('cloud').value.trim(),preset=$('preset').value.trim();if(!/^[a-zA-Z0-9_-]+$/.test(cloud)||!preset){$('uploadMessage').textContent='Cloud name과 unsigned upload preset을 입력해주세요.';return}let fd=new FormData();fd.append('file',blob,'fourcut.png');fd.append('upload_preset',preset);$('uploadMessage').textContent='사진 업로드 중...';try{const r=await fetch(`https://api.cloudinary.com/v1_1/${encodeURIComponent(cloud)}/image/upload`,{method:'POST',body:fd});const o=await r.json();if(!r.ok||!o.secure_url)throw Error(o.error?.message||'업로드 실패');let qrUrl='https://api.qrserver.com/v1/create-qr-code/?size=250x250&data='+encodeURIComponent(o.secure_url);$('qr').innerHTML='';let img=document.createElement('img');img.alt='사진 공유 QR코드';img.src=qrUrl;$('qr').append(img);$('qrWrap').classList.remove('hidden');$('uploadMessage').textContent='QR코드가 생성됐습니다. 사진은 Cloudinary 계정에 저장됩니다.'}catch(e){$('uploadMessage').textContent='QR 생성 실패: '+e.message}}
+$('start').onclick=begin;$('cancel').onclick=reset;$('again').onclick=reset;$('print').onclick=()=>{if(blob)window.print()};$('save').onclick=download;$('share').onclick=share;$('upload').onclick=upload;
+</script></body></html>
